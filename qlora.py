@@ -288,7 +288,11 @@ def get_accelerate_model(args, checkpoint_dir):
 
     setattr(model, 'model_parallel', True)
     setattr(model, 'is_parallelizable', True)
-    modules = find_all_linear_names(args, model)
+    modules = []
+    if args.model_name_or_path == "cyberagent/open-calm-7b":
+        modules = ["query_key_value"]
+    else:
+        modules = find_all_linear_names(args, model)
 
     model.config.torch_dtype=(torch.float32 if args.fp16 else (torch.bfloat16 if args.bf16 else torch.float32))
 
