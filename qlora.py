@@ -465,6 +465,24 @@ def extract_alpaca_dataset(example):
         prompt_format = PROMPT_DICT["prompt_no_input"]
     return {'input': prompt_format.format(**example)}
 
+def convert_instruction(item):
+    instruction = item['instruction']
+    prompt_format = "人間と人工知能のアシスタントの会話です。人間の質問に対して、アシスタントが親切・丁寧・詳細に回答してください。\n"
+    return {'input': prompt_format + f"### Human: {instruction}\n### Assistant: "}
+
+def convert_chat(item):
+    pattern = r'<|im_start|>(.*?)<|im_end|>'
+    matches = re.findall(pattern, item['prompt'], re.DOTALL)
+    matches = list(filter(lambda item: item.strip() != '', matches))[1:]
+    prompt = "人間と人工知能のアシスタントの会話です。人間の質問に対して、アシスタントが親切・丁寧・詳細に回答してください。\n"
+    for i, text in enumerate(matches):
+      if i % 2 == 0:
+        prompt += f"### Human: {text}\n".replace("user\n", "")
+      else:
+        prompt += f"### Assistant: {text}\n".replace("assistant\n", "")
+    prompt += "### Assistant: "
+    return {'input': prompt, 'output': item["response"].replace("<|im_end|>", "")}
+
 def make_data_module(tokenizer: transformers.PreTrainedTokenizer, args) -> Dict:
     """
     Make dataset and collator for supervised fine-tuning.
@@ -504,6 +522,20 @@ def make_data_module(tokenizer: transformers.PreTrainedTokenizer, args) -> Dict:
     elif args.dataset == 'alpaca-ja':
         dataset = load_dataset("fujiki/japanese_alpaca_data")
         dataset = dataset.map(extract_alpaca_dataset, remove_columns=['instruction'])
+    # Chat JA (dolly, hh-rlhf, oasst1)
+    elif args.dataset == 'chat-ja':
+        dataset1 = load_dataset("kunishou/databricks-dolly-15k-ja")
+        dataset1 = dataset1.map(convert_instruction, remove_columns=["input", "instruction", "category", "index"])
+        
+        dataset2 = load_dataset("kunishou/hh-rlhf-49k-ja")
+        dataset2 = dataset2.map(convert_instruction, remove_columns=["input", "instruction", "instruction_en", "ng_translation", "index", "output_en"])
+        
+        dataset3 = load_dataset("aidealab/oasst1-ja")
+        dataset3 = dataset3.map(convert_chat, remove_columns=["prompt", "response"])
+        
+        concatenate_data = concatenate_datasets([dataset1['train'], dataset2['train'], dataset3['train']])
+        dataset = DatasetDict()
+        dataset['train'] = concatenate_data
     # Chip2
     elif args.dataset == 'chip2':
         dataset = load_dataset("laion/OIG", data_files='unified_chip2.jsonl')
