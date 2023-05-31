@@ -468,20 +468,20 @@ def extract_alpaca_dataset(example):
 
 def convert_instruction(item):
     instruction = item['instruction']
-    prompt_format = "人間と人工知能のアシスタントの会話です。人間の質問に対して、アシスタントが親切・丁寧・詳細に回答してください。\n"
-    return {'input': prompt_format + f"### Human: {instruction}\n### Assistant: "}
+    prompt_format = "人間と人工知能のアシスタントの会話です。人間の質問に対して、アシスタントが親切・丁寧・詳細に回答してください。\n\n"
+    return {'input': prompt_format + f"### Human:\n{instruction}\n\n### Assistant:\n"}
 
 def convert_chat(item):
     pattern = r'<|im_start|>(.*?)<|im_end|>'
     matches = re.findall(pattern, item['prompt'], re.DOTALL)
     matches = list(filter(lambda item: item.strip() != '', matches))[1:]
-    prompt = "人間と人工知能のアシスタントの会話です。人間の質問に対して、アシスタントが親切・丁寧・詳細に回答してください。\n"
+    prompt = "人間と人工知能のアシスタントの会話です。人間の質問に対して、アシスタントが親切・丁寧・詳細に回答してください。\n\n"
     for i, text in enumerate(matches):
       if i % 2 == 0:
-        prompt += f"### Human: {text}\n".replace("user\n", "")
+        prompt += f"### Human:\n{text}\n\n".replace("user\n", "")
       else:
-        prompt += f"### Assistant: {text}\n".replace("assistant\n", "")
-    prompt += "### Assistant: "
+        prompt += f"### Assistant:\n{text}\n\n".replace("assistant\n", "")
+    prompt += "### Assistant:\n"
     return {'input': prompt, 'output': item["response"].replace("<|im_end|>", "")}
 
 def make_data_module(tokenizer: transformers.PreTrainedTokenizer, args) -> Dict:
