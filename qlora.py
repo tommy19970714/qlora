@@ -141,7 +141,7 @@ class TrainingArguments(transformers.Seq2SeqTrainingArguments):
         metadata={"help": "How many bits to use."}
     )
     lora_r: int = field(
-        default=64,
+        default=8, # 64
         metadata={"help": "Lora R dimension."}
     )
     lora_alpha: float = field(
@@ -149,7 +149,7 @@ class TrainingArguments(transformers.Seq2SeqTrainingArguments):
         metadata={"help": " Lora alpha."}
     )
     lora_dropout: float = field(
-        default=0.0,
+        default=0.05, # 0.0
         metadata={"help":"Lora dropout."}
     )
     max_memory_MB: int = field(
@@ -465,7 +465,7 @@ def extract_alpaca_dataset(example):
 def convert_instruction(item):
     instruction = item['instruction']
     prompt_format = "人間と人工知能のアシスタントの会話です。人間の質問に対して、アシスタントが親切・丁寧・詳細に回答してください。\n\n"
-    return {'input': prompt_format + f"### Human:\n{instruction}\n\n### Assistant:\n"}
+    return {'input': prompt_format + f"### Human:\n{instruction}\n\n### Assistant:\n", 'output': item['output'] + "<|endoftext|>"}
 
 def convert_chat(item):
     pattern = r'<|im_start|>(.*?)<|im_end|>'
@@ -478,7 +478,7 @@ def convert_chat(item):
       else:
         prompt += f"### Assistant:\n{text}\n\n".replace("assistant\n", "")
     prompt += "### Assistant:\n"
-    return {'input': prompt, 'output': item["response"].replace("<|im_end|>", "")}
+    return {'input': prompt, 'output': item["response"].replace("<|endoftext|>", "")}
 
 def make_data_module(tokenizer: transformers.PreTrainedTokenizer, args) -> Dict:
     """
